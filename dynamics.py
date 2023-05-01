@@ -1,5 +1,25 @@
 import numpy as np
 
+def get_motion_signs(state):
+  # +1 for positive
+  # -1 for negative
+  # 0 for stationary
+  motion_signs = np.sign(state.flatten()[2:])
+  return motion_signs
+
+def get_sliding_friction(tau_sliding, state):
+  omega1, omega2 = state.flatten()[2:]
+  tau_friction = np.zeros((2,1))
+  motion_signs = get_motion_signs(state)
+
+  for i in range(2):
+    sign = motion_signs[i]
+    if sign != 0:
+      # sliding friction
+      tau_friction[i] = -sign*state.flatten()[2+i]**2 * tau_sliding
+
+  return tau_friction
+
 class Dynamics:
     def __init__(self, m1, m2, l1, l2, g=9.8, static_torque=0.0):
         self.m1 = m1
@@ -93,7 +113,8 @@ class Dynamics:
                     model_transition = True
 
         # debug
-        debug = stictions[0] and not model_transition
+        # debug = stictions[0] and not model_transition
+        debug = False
         if debug:
             print(f"stiction active on 0!, staus {staus}")
 

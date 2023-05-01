@@ -9,9 +9,8 @@ import imgui
 import math
 import numpy as np
 import time
-from dynamics import Dynamics
+from dynamics import *
 
-STATIONARY_THRESH = 1e-4
 
 dynamics = Dynamics(m1=0.5, m2=0.1, l1=0.5, l2=0.4)
 
@@ -36,37 +35,11 @@ def plot_joints(overlayable, mass_positions, color):
     prev = p
     prev_plot = p_plot
 
-def get_motion_signs(state):
-  # +1 for positive
-  # -1 for negative
-  # 0 for stationary
-  motion_signs = np.sign(state.flatten()[2:])
-  for i in range(2):
-    if abs(state.flatten()[2+i]) < STATIONARY_THRESH:
-      motion_signs[i] = 0
-
-  return motion_signs
-
-
-def get_sliding_friction(tau_sliding, state):
-  omega1, omega2 = state.flatten()[2:]
-  tau_friction = np.zeros((2,1))
-  motion_signs = get_motion_signs(state)
-
-  for i in range(2):
-    sign = motion_signs[i]
-    if sign != 0:
-      # sliding friction
-      tau_friction[i] = -sign*state.flatten()[2+i]**2 * tau_sliding
-
-  return tau_friction
 
 parser = argparse.ArgumentParser(description="Visualizer for Control Theory Final Project")
 args = parser.parse_args()
 
 init_state = np.array([0.6, 0.0, -0.01, 0.0]).reshape((4,1))
-# init_state = np.zeros((4,1))
-
 
 need_restart = True
 run = False
@@ -182,7 +155,7 @@ while app.running:
         action = np.random.normal(size=(2,1))
         action[0] *= 0.6
         action[1] *= 0.2
-        print(f"drive action changed to {action.T}")
+        # print(f"drive action changed to {action.T}")
 
     imgui.end()
 
