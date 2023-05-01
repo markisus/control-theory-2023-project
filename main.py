@@ -10,9 +10,14 @@ import math
 import numpy as np
 import time
 from dynamics import *
+from simulation import Simulation
 
-
+dt = 0.01
+tau_sliding = 0.1
+tau_static = 0.2
 dynamics = Dynamics(m1=0.5, m2=0.1, l1=0.5, l2=0.4)
+init_state = np.array([0.6, 0.0, -0.01, 0.0]).reshape((4,1))
+simulation = Simulation(dt, dynamics, init_state, tau_sliding, tau_static)
 
 def to_ndc(vec2):
   out = vec2 * 0.2
@@ -39,89 +44,50 @@ def plot_joints(overlayable, mass_positions, color):
 parser = argparse.ArgumentParser(description="Visualizer for Control Theory Final Project")
 args = parser.parse_args()
 
-init_state = np.array([0.6, 0.0, -0.01, 0.0]).reshape((4,1))
-
 need_restart = True
 run = False
 use_friction = True
 drive = False
 drive_timer = 0.0
 
-tau_sliding = 0.1
-tau_static = 0.2
 
-dt = 0.01
 app = ImguiSdlWrapper("Visualizer", 1280, 720)
 
 while app.running:
     if need_restart:
       t = 0.0
-      state = init_state.copy()
-      action = np.zeros((2, 1))
-      mass_positions = dynamics.get_mass_positions(state)
+      simulation.reset(init_state)
+      simulation.action = np.zeros((2, 1))
+      mass_positions = dynamics.get_mass_positions(simulation.state)
       prev_mass_positions = mass_positions.copy()
-      prev_state = state.copy()
       need_restart = False
   
     app.main_loop_begin()
 
     if run:
-      # see if any stictions need to be turned on
-      stictions = [0, 0]
       if use_friction:
-        stictions_activated = False
-        for i in range(2):
-          omega = state.flatten()[2+i]
-          prev_omega = prev_state.flatten()[2+i]
-
-          # stationary if vel close to 0 or omega changed signs
-          stationary = (abs(omega) < 1e-6) or (omega * prev_omega < 0)
-
-          if stictions[i] == 0 and stationary:
-            stictions[i] = 1
-            # print(f"0 detected on state {i}, {state.T}")
-            state[2+i, 0] = 0
-            stictions_activated = True
-
-      prev_mass_positions = mass_positions.copy()
-      prev_state = state.copy()
-
-      sliding_friction = np.zeros((2,1))
-      if use_friction:
-        sliding_friction = get_sliding_friction(tau_sliding, state)
-        # print(f"state {state.T}, sliding friction {sliding_friction.T}")
-
-      use_rk = True
-      if use_rk:
-        # 4th order Runge Kutta
-        k1 = dynamics.get_dstate_dt(state, action + sliding_friction, stictions)
-        k2 = dynamics.get_dstate_dt(state + dt/2 * k1, action + sliding_friction, stictions)
-        k3 = dynamics.get_dstate_dt(state + dt/2 * k2, action + sliding_friction, stictions)
-        k4 = dynamics.get_dstate_dt(state + dt * k3, action + sliding_friction, stictions)
-        state += dt/6 * (k1 + 2*k2 + 2*k3 + k4)
+        simulation.tau_sliding = tau_sliding
+        simulation.tau_static = tau_static
       else:
-        state += dt * dynamics.get_dstate_dt(state, action + sliding_friction, stictions)
+        simulation.tau_sliding = 0.0
+        simulation.tau_static = 0.0
 
-      mass_positions = dynamics.get_mass_positions(state)
+      simulation.step()
+      mass_positions = dynamics.get_mass_positions(simulation.state)
       t += dt
 
       if drive:
         drive_timer += dt
     
-    vels = (mass_positions - prev_mass_positions)/dt
-
     imgui.begin("Gui", True)
 
-    pe = dynamics.get_pe(state)
-    ke = dynamics.get_ke(state)
+    pe = dynamics.get_pe(simulation.state)
+    ke = dynamics.get_ke(simulation.state)
 
-    imgui.text(f"state {state.T}")
+    imgui.text(f"state {simulation.state.T}")
     imgui.text(f"potential {pe:<10.3} kinetic {ke:<10.3} total {pe + ke:<10.3}")
 
-    # builtin_taus = dynamics.get_builtin_torques(state)
-    # imgui.text(f"builtin torques {builtin_taus}")
-    
-    tau1, tau2 = action.flatten()
+    tau1, tau2 = simulation.action.flatten()
     _, tau1 = imgui.slider_float("torque1", tau1, -5, 5)
     _, tau2 = imgui.slider_float("torque2", tau2, -5, 5)
     _, tau_sliding = imgui.slider_float("sliding torque", tau_sliding, 0.0, 10.0)
@@ -133,8 +99,8 @@ while app.running:
       tau1 = 0
       tau2 = 0
     
-    action[0] = tau1
-    action[1] = tau2
+    simulation.action[0] = tau1
+    simulation.action[1] = tau2
 
     need_restart = imgui.button("restart") or need_restart
 
@@ -152,10 +118,9 @@ while app.running:
     if drive:
       if drive_timer >= 0.1:
         drive_timer = 0.0
-        action = np.random.normal(size=(2,1))
-        action[0] *= 0.6
-        action[1] *= 0.2
-        # print(f"drive action changed to {action.T}")
+        simulation.action = np.random.normal(size=(2,1))
+        simulation.action[0] *= 0.6
+        simulation.action[1] *= 0.2
 
     imgui.end()
 
