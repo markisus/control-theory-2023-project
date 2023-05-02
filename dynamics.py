@@ -21,13 +21,12 @@ def get_sliding_friction(tau_sliding, state):
   return tau_friction
 
 class Dynamics:
-    def __init__(self, m1, m2, l1, l2, g=9.8, static_torque=0.0):
+    def __init__(self, m1, m2, l1, l2, g=9.8):
         self.m1 = m1
         self.m2 = m2
         self.l1 = l1
         self.l2 = l2
         self.g = g
-        self.static_torque = static_torque
 
     def get_torques_alt(self, state):
         theta1 = state[0]
@@ -78,7 +77,7 @@ class Dynamics:
 
         return r, Binv
 
-    def get_dstate_dt(self, state, action, stictions=(0,0)):
+    def get_dstate_dt(self, state, action, stictions=(0,0), static_torque=0):
         stictions = list(stictions)
 
         theta1, theta2b, theta1_dot, theta2b_dot = state.flatten()
@@ -108,7 +107,7 @@ class Dynamics:
         model_transition = False
         for i in range(2):
             if stictions[i] == 1:
-                if abs(staus[i]) >= self.static_torque:
+                if abs(staus[i]) >= static_torque:
                     stictions[i] = 0
                     model_transition = True
 

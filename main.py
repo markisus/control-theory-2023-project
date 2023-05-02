@@ -50,7 +50,6 @@ use_friction = True
 drive = False
 drive_timer = 0.0
 
-
 app = ImguiSdlWrapper("Visualizer", 1280, 720)
 
 while app.running:
@@ -65,12 +64,10 @@ while app.running:
     app.main_loop_begin()
 
     if run:
-      if use_friction:
-        simulation.tau_sliding = tau_sliding
-        simulation.tau_static = tau_static
-      else:
-        simulation.tau_sliding = 0.0
-        simulation.tau_static = 0.0
+      simulation.tau_sliding = tau_sliding
+      simulation.tau_static = tau_static
+      simulation.use_sliding_friction = use_friction
+      simulation.use_static_friction = use_friction
 
       simulation.step()
       mass_positions = dynamics.get_mass_positions(simulation.state)
@@ -92,8 +89,6 @@ while app.running:
     _, tau2 = imgui.slider_float("torque2", tau2, -5, 5)
     _, tau_sliding = imgui.slider_float("sliding torque", tau_sliding, 0.0, 10.0)
     _, tau_static = imgui.slider_float("static torque", tau_static, 0.0, 10.0)
-
-    dynamics.static_torque = tau_static
 
     if imgui.button("zero torques"):
       tau1 = 0
