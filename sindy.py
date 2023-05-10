@@ -141,6 +141,46 @@ def make_library(states, actions):
   return element_ids, feature_names, lib
 
 
+def make_sindy_alt(states, actions, dt, lambd=1.00):
+  dotX = make_derivs(states, dt)
+  elements, feature_names, Theta = make_library(states[:-1,:], actions[:-1,:])
+
+  libsize = len(feature_names)
+  for i in range(20):
+    print("i ", i, " libsize ", len(feature_names))
+    # least squares
+    N = Theta.T @ Theta
+    z = Theta.T @ dotX
+    # print("dotX shape", dotX.shape)
+    # print("Theta shape", Theta.shape)
+    xis = np.linalg.solve(N, z)
+
+    # sparsify
+    xis[np.abs(xis) < lambd] = 0
+
+    # print("xis shape", xis.shape)
+    # print("xis.any", xis.any(axis=1))
+    # print("sparsity", np.count_nonzero(xis)/xis.size)
+
+    # figure out the features that are unused
+    # get indices of non-zero rows
+    nonzero_xi_rows = np.where(xis.any(axis=1))[0]
+
+
+    Theta = Theta[:, nonzero_xi_rows]
+    feature_names = [feature_names[i] for i in nonzero_xi_rows]
+    xis =  xis[nonzero_xi_rows, :]
+
+    prev_libsize = libsize
+    libsize = len(feature_names)
+
+    if prev_libsize == libsize:
+      # libsize did not decrease
+      break
+
+  print("final libsize", libsize)
+  
+
 def make_sindy(states, actions, dt, alpha=0.01, tol=0.05):
   dotX = make_derivs(states, dt)
   elements, feature_names, Theta = make_library(states[:-1,:], actions[:-1,:])
@@ -174,7 +214,7 @@ if __name__ == "__main__":
   with open(args.path, "rb") as f:
     data = pickle.load(f)
 
-  sindy_model = make_sindy(data["states"], data["actions"], data["dt"])
+  sindy_model = make_sindy_alt(data["states"], data["actions"], data["dt"])
   sindy_model["data"] = data
 
   with open(args.out_path, "wb") as f:

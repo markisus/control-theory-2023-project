@@ -63,8 +63,6 @@ if __name__ == "__main__":
   sindy_dynamics = SindyDynamics(sindy_model)
   sindy_simulation = SindySimulation(dt, sindy_dynamics, init_state)
 
-  mpc = MPC()
-
   run = False
   drive = False
   need_restart = True
@@ -141,12 +139,12 @@ if __name__ == "__main__":
         drive_timer = 0.0
 
       if drive:
-        simulation.action = mpc.compute_action(dynamics, sindy_dynamics, simulation.state, goal, simulation.action.copy())
-        # if drive_timer >= 0.1:
-        #   drive_timer = 0.0
-        #   simulation.action = np.random.normal(size=(2,1))
-        #   simulation.action[0] *= 0.6
-        #   simulation.action[1] *= 0.2
+        # simulation.action = mpc.compute_action(dynamics, sindy_dynamics, simulation.state, goal, simulation.action.copy())
+        if drive_timer >= 0.1:
+          drive_timer = 0.0
+          simulation.action = np.random.normal(size=(2,1))
+          simulation.action[0] *= 0.6
+          simulation.action[1] *= 0.2
 
       imgui.end()
 

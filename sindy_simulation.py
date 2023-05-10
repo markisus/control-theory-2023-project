@@ -23,7 +23,7 @@ class SindyDynamics:
     col_activations = np.zeros((Ws.shape[1],))
     for col in nzcols:
         col_activations[col] = 1
-    print(np.count_nonzero(col_activations))
+    # print(np.count_nonzero(col_activations))
 
     start = time.monotonic()
     basis = eval_theta_single(self.feature_names, elements, col_activations).T
